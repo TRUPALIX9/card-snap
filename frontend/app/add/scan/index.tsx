@@ -71,10 +71,29 @@ export default function ScanAddPage() {
       if (!res.ok) throw new Error("Failed to scan the image");
 
       const result = await res.json();
-      console.log("🧠 OCR result:", result);
-      console.log("------------------------------------------");
 
-      router.push("../add/manual");
+      // Prefill the manual form with what the backend extracted, so the
+      // user only reviews and saves. Prefer the labeled regex match, then
+      // the NLP/regex entity lists.
+      const firstText = (...values: unknown[]) => {
+        for (const v of values) {
+          if (typeof v === "string" && v.trim()) return v.trim();
+        }
+        return "";
+      };
+      const raw = result?.rawExtraction ?? {};
+      const entities = result?.compromiseEntities ?? {};
+
+      router.push({
+        pathname: "/add/manual",
+        params: {
+          fullName: firstText(raw.name, entities.names?.[0]),
+          email: firstText(raw.email, entities.emails?.[0]),
+          phone: firstText(raw.phone, entities.phones?.[0]),
+          company: firstText(raw.company, entities.organizations?.[0]),
+          scanned: "1",
+        },
+      });
     } catch (err: any) {
       console.error("❌ Capture error:", err);
       Alert.alert("Scan Failed", err.message || "An error occurred.");
