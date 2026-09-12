@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Secrets: copy the .env.example files instead
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+dist/
