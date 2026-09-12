@@ -1,170 +1,81 @@
+# Card Snap app
 
-# 📇 Card Vault – Frontend (React Native + Expo + TypeScript)
+The mobile app for [Card Snap](../README.md), built with Expo SDK 53 (React Native 0.79, TypeScript), Expo Router and React Native Paper. All contact data comes from the [backend](../backend/README.md) API; the only thing stored on the device is your light/dark theme choice.
 
-Card Vault is a cross-platform mobile app built with **React Native (Expo)** and **TypeScript** for scanning business cards, extracting contact info using OCR, and saving it locally or syncing with a backend.
+## Screens
 
-This frontend uses **Expo Router** for file-based navigation and is optimized for Android, iOS, and Web.
+| Route | Screen |
+|---|---|
+| `/` | **Home**: welcome card with View Contacts, Add Contact and Profile & Settings |
+| `/contacts` | **Contacts**: searchable list (name, email or company), pull to refresh, `+` button |
+| `/profile` | **Profile**: the user from `/api/user/me` and the Dark Mode switch |
+| `/add` | **Add a Contact**: choose Scan Business Card or Enter Info Manually |
+| `/add/scan` | **Scan Business Card**: camera view, camera flip and shutter |
+| `/add/manual` | **Add Contact Manually**: ten fields; name, email and company are required |
+| `/contacts/:id` | **Contact Info**: tap the phone to call or the email to write |
 
----
+The bottom tabs (Home, Contacts, Profile) are icon-only. A global header from `components/Header.tsx` sits above every screen and shows a back arrow on pushed screens.
 
-## 🧭 Features
+### Scan flow
 
-- 📸 Scan business cards using device camera (`expo-camera`)
-- 🧠 OCR & AI/Regex-based parsing on backend
-- 🗂 View and manage contacts
-- 📝 Add contacts manually
-- 🌗 Light/dark mode with ThemeContext
-- 📁 Organized with file-based routing via Expo Router
-- ⚙️ Configurable with `.env` support for backend URL
+1. The scan screen asks for camera permission and takes a base64 photo with `expo-camera`.
+2. It posts `{ "base64": "..." }` to `POST /api/ocrExtract`.
+3. It opens `/add/manual` with `fullName`, `email`, `phone` and `company` taken from the response (`rawExtraction`, then the first entry of each `compromiseEntities` list), so you only review and save.
+4. Saving posts the form to `POST /api/contacts` and returns to the Contacts tab, which refetches.
 
----
+## Setup
 
-## 📁 Project Layout (Key Folders)
-
-```
-
-app/
-├── (tabs)/           # Home, Profile, Contacts tabs
-├── add/              # Add contact manually or via scan
-├── contacts/\[id].tsx # View individual contact
-├── \_layout.tsx       # Root layout using Stack
-├── +not-found.tsx    # 404 fallback
-components/           # Header and UI components
-context/              # ThemeContext
-constants/            # Theme colors
-assets/               # Images & Fonts
-theme/                # Theme management
-
-````
-
----
-
-## ⚙️ Environment Setup
-
-Create a `.env` file in the root:
-
-```env
-EXPO_PUBLIC_API_URL=http://<your-local-ip>:5091
-````
-
-> Replace `<your-local-ip>` with your backend's IP address (accessible from your phone on same network).
-
----
-
-## ▶️ Run the App Locally
-
-1. **Install dependencies**
+Start the backend first (see [backend/README.md](../backend/README.md)), then from the repository root:
 
 ```bash
+cd frontend
 npm install
+cp .env.example .env   # then set EXPO_PUBLIC_API_URL
+npx expo start         # or: npm start
 ```
 
-2. **Start Expo**
+| Variable | Required | Description |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | Yes | Base URL of the backend as seen from your phone, for example `http://<your computer's LAN IP>:5091`, with no trailing slash. `localhost` only works in a simulator on the same machine. |
+
+In the Expo terminal, scan the QR code with Expo Go, or press `i` (iOS simulator), `a` (Android) or `w` (web). The camera scan needs a real device or a simulator with a camera.
+
+Type-check with:
 
 ```bash
-npx expo start
+npx tsc --noEmit
 ```
 
-3. **Preview options**
+## Builds (EAS)
 
-* Press `a` → Android
-* Press `i` → iOS (Mac only)
-* Press `w` → Web
-
-> Scan the QR code with the Expo Go app to preview on physical device.
-
----
-
-## 📸 OCR API Used
-
-The app sends base64 image data to the backend via:
-
-### POST `/ocrExtract`
-
-**Payload:**
-
-```json
-{
-  "base64": "<image_data>"
-}
-```
-
-**Response:**
-
-```json
-{
-  "text": "Extracted OCR text",
-  "data": {
-    "name": "Jane Smith",
-    "email": "jane@example.com",
-    "phone": "+1 234 567 8900",
-    "company": "Startup Co",
-    "address": "456 Innovation Way"
-  }
-}
-```
-
----
-
-## 🏗 Build for Production (EAS)
-
-You can generate installable builds using **EAS**:
-
-### Install EAS
+`eas.json` defines `development` (dev client, internal), `preview` (internal) and `production` (auto-increment) profiles. The app name is Card Snap, and the bundle identifier / package is `com.trupalix9.cardSnap`.
 
 ```bash
 npm install -g eas-cli
-```
-
-### Login & configure
-
-```bash
 eas login
-eas init
+eas build -p android --profile preview
+eas build -p ios --profile production   # needs an Apple Developer account
 ```
 
-### Build commands
+## Project structure
 
-```bash
-eas build -p android --profile production
-eas build -p ios --profile production
+```text
+frontend/
+├── app/
+│   ├── _layout.tsx          # Root: fonts, theme providers, global Header, Stack
+│   ├── (tabs)/              # Home (index), Contacts, Profile + tab bar layout
+│   ├── add/                 # Add chooser, scan/ and manual/
+│   ├── contacts/[id].tsx    # Contact Info
+│   ├── manualAdd.tsx        # Older add form (only reachable at /manualAdd)
+│   └── +not-found.tsx       # 404 screen
+├── components/Header.tsx    # Global app bar
+├── context/ThemeContext.tsx # Light/dark state, saved with AsyncStorage
+├── theme/index.ts           # MD3 light and dark themes (primary #008BFF)
+├── assets/                  # App icons, splash, fonts
+├── app.json                 # Expo config
+└── eas.json                 # EAS Build profiles
 ```
 
-> iOS builds require Apple Developer credentials.
+## Author
 
----
-
-## 🔧 Upcoming Features
-
-* [ ] Offline OCR fallback (on-device)
-* [ ] MMKV-based local storage
-* [ ] NFC/QR contact exchange
-* [ ] Tagging + filter UI for contacts
-
----
-
-## 🧑‍💻 Author
-
-**Trupal Patel**
-📧 [trupal.work@gmail.com](mailto:trupal.work@gmail.com)
-🔗 GitHub: [@TRUPALIX9](https://github.com/TRUPALIX9)
-
----
-
-## 📄 License
-
-MIT License © 2025 Trupal Patel
-
----
-
-## 🙌 Acknowledgements
-
-* [Expo](https://expo.dev/)
-* [React Native Paper](https://callstack.github.io/react-native-paper/)
-* [Tesseract.js](https://github.com/naptha/tesseract.js)
-* [Hugging Face](https://huggingface.co/)
-* [Expo Router](https://expo.github.io/router/)
-
-```
-
-```
+**Trupal Patel** · [trupalpatel.com](https://trupalpatel.com) · [trupal.work@gmail.com](mailto:trupal.work@gmail.com) · [GitHub](https://github.com/TRUPALIX9)

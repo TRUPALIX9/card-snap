@@ -1,206 +1,115 @@
+# Card Snap backend
 
+The API behind [Card Snap](../README.md): contacts CRUD on MongoDB and OCR for photos of business cards. It is Express 5 + TypeScript, run with `ts-node`.
 
-# 🧠 Card Vault – Backend (Node.js + TypeScript + OCR + MongoDB)
+## Setup
 
-This is the backend service for **Card Vault**, a cross-platform app that scans business cards, performs OCR, and extracts structured contact information using regex and/or AI. Built with **Node.js, Express, TypeScript, MongoDB, Tesseract.js**, and `sharp`.
-
----
-
-## 🚀 Features
-
-- 📥 Accepts Base64 or file image uploads of business cards
-- 🧠 Runs OCR using `tesseract.js` and pre-processing via `sharp`
-- 📊 Parses structured contact data (name, phone, email, company, address)
-- 🧾 Optionally integrates Hugging Face for NLP-based parsing
-- 💽 MongoDB storage for user and contact records
-- 🔐 Authentication middleware ready
-- 🧩 Modular routing (`/ocr`, `/ocrExtract`, `/contacts`, `/user`, `/playground`)
-- 🛠 Written in TypeScript for type safety
-
----
-
-## 📁 Project Structure
-
-```
-
-src/
-├── controllers/          # OCR + contact logic
-├── routes/               # Express routers (modular)
-├── models/               # Mongoose schemas
-├── middleware/           # Auth middleware
-├── @types/               # Custom TypeScript declarations
-└── server.ts             # Entry point
-
-````
-
----
-
-## ⚙️ Setup Instructions
-
-### 1. Clone the Repository
+From the repository root:
 
 ```bash
-git clone https://github.com/TRUPALIX9/card-snap-backend.git
-cd card-snap-backend
-````
-
-### 2. Install Dependencies
-
-```bash
+cd backend
 npm install
+cp .env.example .env   # then fill it in
+npm run dev            # ts-node src/server.ts
 ```
 
-### 3. Environment Variables
+The server connects to MongoDB first and exits if that fails. Once it's listening it prints local and network URLs for `GET /api/playground/status` (default port `5091`) and calls its own diagnostics once as a self-check.
 
-Create a `.env` file using `.env.example`:
+There is no build script; `npm run dev` is the only way to start it. Run it from `backend/` so `tesseract.js` finds `eng.traineddata` and the temporary `uploads/` folder is created there.
 
-```env
-PORT=5091
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/cardvault
-HUGGINGFACE_API_KEY=your_huggingface_api_key  # Optional
+### Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | Yes | MongoDB connection string (Atlas or local). |
+| `PORT` | No | Port to listen on. Defaults to `5091`. |
+| `LOG_RESPONSE` | No | `true` logs every request and response body. These include base64 images and contact details, so keep it off unless you are debugging. |
+| `HUGGINGFACE_API_KEY` | No | Token for the Hugging Face Inference API. The NER step is skipped when it is empty. |
+| `NODE_ENV` | No | `production` makes `/api/playground/system` and `/api/playground/db` return 404. |
+
+## API
+
+All routes are under `/api`. JSON bodies up to 20 MB are accepted (enough for a base64 photo).
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/contacts` | All contacts. |
+| `POST` | `/api/contacts` | Create a contact. `201` with the saved document, `400` if validation fails. |
+| `GET` | `/api/contacts/:id` | One contact. `400` for an invalid id, `404` if not found. |
+| `PUT` | `/api/contacts/:id` | Update a contact (validators run). |
+| `DELETE` | `/api/contacts/:id` | Delete a contact. `204` on success. |
+| `GET` | `/api/user/me` | The first document in the `users` collection (`_id`, `fullName`, `email`), `404` if there is none. No route creates users. |
+| `POST` | `/api/ocr` | Raw OCR text for a base64 image. |
+| `POST` | `/api/ocrExtract` | OCR plus field extraction (used by the app's scan screen). |
+| `GET` | `/api/playground/status` | Health check: name, status, timestamp, port and `NODE_ENV`. |
+| `GET` | `/api/playground/system` | Platform, uptime and memory. Not available when `NODE_ENV=production`. |
+| `GET` | `/api/playground/db` | Collection names and document counts. Not available when `NODE_ENV=production`. |
+
+### OCR request
+
+Both OCR endpoints take the image as base64, without a `data:` prefix:
+
+```json
+{ "base64": "<base64 image data>" }
 ```
 
----
+`POST /api/ocr` responds with:
 
-## ▶️ Run the Server
-
-```bash
-npm run dev
+```json
+{ "message": "OCR completed", "fileType": "image/png", "text": "..." }
 ```
 
-> Server runs at: `http://localhost:5091`
-
----
-
-## 🔗 API Endpoints
-
-### 🧠 OCR: `POST /ocr`
-
-Extract raw text from Base64 image input.
+`POST /api/ocrExtract` responds with:
 
 ```json
 {
-  "base64": "<base64_image_string>"
+  "message": "OCR & extraction completed",
+  "text": "...full OCR text...",
+  "compromiseEntities": { "names": [], "organizations": [], "emails": [], "phones": [] },
+  "huggingFaceResult": null,
+  "rawExtraction": { "name": "", "email": "", "phone": "", "company": "" }
 }
 ```
 
-Response:
+`huggingFaceResult` is the model's raw output, or `null` when the key is not set or the call fails. The app prefills its form from `rawExtraction`, falling back to the first item of each `compromiseEntities` list.
 
-```json
-{
-  "text": "John Doe\nCEO\njohn@example.com\n123-456-7890"
-}
+### How OCR works
+
+1. `sharp` auto-rotates, converts to grayscale, resizes to 1000 px wide and sharpens the image, writing a temporary PNG to `uploads/` (created on first use and deleted after each request).
+2. `tesseract.js` reads the text with the English model (`eng.traineddata`).
+3. `compromise` finds people and organizations; regular expressions find emails, phone numbers and lines labeled "Name:"/"Company:".
+4. Optionally, the text is sent to Hugging Face `dslim/bert-base-NER`.
+
+### Contact model
+
+`fullName`, `email` and `company` are required. Optional: `jobTitle`, `phone`, `address`, `website`, `linkedin`, `department`, `industry`, `notes`, `imageUri`. `scannedAt` defaults to the creation time.
+
+## Security notes
+
+- There is **no authentication** and CORS allows any origin: anyone who can reach the server can read, change or delete every contact. `src/middleware/auth.ts` is a mock that is not mounted anywhere. Run the API only on a trusted network.
+- The diagnostics routes never return environment variables or database documents.
+- Never commit `.env`; `.env.example` lists the variable names.
+
+## Florence-2 notebook (experimental)
+
+`train_florence2.ipynb` is a Google Colab notebook (T4 GPU) that fine-tunes `microsoft/Florence-2-base` with LoRA (r = 8, 15 epochs, `paged_adamw_8bit`) to output contact details as JSON from a card image. It expects a `./dataset` folder with the images and an `annotations.json` that maps each image filename to its target JSON string, and saves the result to `./custom_florence2_model`. The API does not use this model yet.
+
+## Project structure
+
+```text
+backend/
+├── src/
+│   ├── server.ts            # Express app, routes, request logger, startup
+│   ├── controllers/         # contacts, OCR (ocrController, ocrWirhExtractController), playground
+│   ├── routes/              # /api/contacts, /api/user, /api/ocr, /api/ocrExtract, /api/playground
+│   ├── models/              # Mongoose Contact and User schemas
+│   ├── middleware/auth.ts   # Mock auth (not mounted)
+│   └── @types/              # Shared TypeScript types
+├── eng.traineddata          # Tesseract English language data
+├── train_florence2.ipynb    # Florence-2 LoRA fine-tuning notebook
+└── .env.example             # Environment variable names
 ```
 
----
+## Author
 
-### 🧠 OCR + Structured Extract: `POST /ocrExtract`
-
-Processes OCR + AI/regex parsing to return structured contact info.
-
-```json
-{
-  "base64": "<base64_image_string>"
-}
-```
-
-Response:
-
-```json
-{
-  "text": "...raw OCR text...",
-  "data": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+1 234 567 890",
-    "company": "Tech Ltd.",
-    "address": "123 Innovation Drive, CA"
-  }
-}
-```
-
----
-
-### 📇 Contacts API
-
-* `POST /contacts` – Save a contact
-* `GET /contacts` – Get all contacts
-* `GET /contacts/:id` – Get one contact
-* `DELETE /contacts/:id` – Delete contact
-
----
-
-## 🔐 User Authentication
-
-* Routes for `/user` exist (auth middleware is ready)
-* Token-based auth can be implemented as needed
-
----
-
-## 📦 Build & Start (Production)
-
-```bash
-npm run build
-node dist/server.js
-```
-
-> Compiles TypeScript → JavaScript and starts Express server.
-
----
-
-## 🧪 TypeScript Types
-
-Custom types located in:
-
-```
-src/@types/
-├── user.d.ts
-├── contact.d.ts
-└── pdf-poppler.d.ts
-```
-
----
-
-## 📁 Assets
-
-* `eng.traineddata` – OCR language model file (English)
-* `.gitignore`, `.env.example`, `tsconfig.json` – typical config files
-
----
-
-## 📄 Sample .env
-
-```env
-PORT=5091
-MONGO_URI=mongodb+srv://<Cluter>
-HUGGINGFACE_API_KEY=your_api_key_here
-```
-
----
-
-## 👤 Author
-
-**Trupal Patel**
-📧 [trupal.work@gmail.com](mailto:trupal.work@gmail.com)
-🔗 GitHub: [@TRUPALIX9](https://github.com/TRUPALIX9)
-
----
-
-## 📄 License
-
-MIT License © 2025 Trupal Patel
-
----
-
-## 🙌 Acknowledgements
-
-* [Tesseract.js](https://github.com/naptha/tesseract.js)
-* [Sharp](https://github.com/lovell/sharp)
-* [Express.js](https://expressjs.com/)
-* [MongoDB](https://www.mongodb.com/)
-* [Hugging Face](https://huggingface.co/)
-* [TypeScript](https://www.typescriptlang.org/)
-
-```
-
-```
+**Trupal Patel** · [trupalpatel.com](https://trupalpatel.com) · [trupal.work@gmail.com](mailto:trupal.work@gmail.com) · [GitHub](https://github.com/TRUPALIX9)
