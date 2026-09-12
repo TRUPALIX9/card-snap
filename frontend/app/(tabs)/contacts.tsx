@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -9,13 +9,13 @@ import {
 } from "react-native";
 import { Searchbar, List, FAB, useTheme, Text } from "react-native-paper";
 import axios from "axios";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 interface IContact {
   _id: string;
-  fullName: string;
-  email: string;
-  company: string;
+  fullName?: string;
+  email?: string;
+  company?: string;
   jobTitle?: string;
   phone?: string;
 }
@@ -26,31 +26,45 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [filtered, setFiltered] = useState<IContact[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadError, setLoadError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       const res = await axios.get(
         `${process.env.EXPO_PUBLIC_API_URL}/api/contacts`
       );
-      setContacts(res.data);
-      setFiltered(res.data);
+      setContacts(Array.isArray(res.data) ? res.data : []);
+      setLoadError(false);
     } catch (err) {
       console.error("Failed to load contacts", err);
+      setLoadError(true);
     }
+  }, []);
+
+  // Refetch whenever the tab gains focus, so a contact saved from the add
+  // flow shows up without restarting the app.
+  useFocusEffect(
+    useCallback(() => {
+      fetchContacts();
+    }, [fetchContacts])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchContacts();
+    setRefreshing(false);
   };
 
   useEffect(() => {
-    fetchContacts();
-  }, []);
-
-  useEffect(() => {
+    // Only fullName, email and company are required by the schema, but older
+    // or externally created records may lack them; don't crash on those.
     const q = searchQuery.toLowerCase();
     setFiltered(
-      contacts.filter(
-        (c) =>
-          c.fullName.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q) ||
-          c.company.toLowerCase().includes(q)
+      contacts.filter((c) =>
+        [c.fullName, c.email, c.company].some((v) =>
+          (v ?? "").toLowerCase().includes(q)
+        )
       )
     );
   }, [searchQuery, contacts]);
@@ -76,7 +90,7 @@ export default function ContactsPage() {
       {filtered.length === 0 && (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: theme.colors.outline }]}>
-            No contacts found
+            {loadError ? "Couldn't load contacts" : "No contacts found"}
           </Text>
         </View>
       )}
@@ -84,6 +98,8 @@ export default function ContactsPage() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item._id}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
           <View
             style={[
@@ -95,20 +111,23 @@ export default function ContactsPage() {
             ]}
           >
             <List.Item
-              title={item.fullName}
+              title={item.fullName || "Unnamed contact"}
               description={() => (
                 <View style={{ marginTop: 4 }}>
                   <Text style={{ color: theme.colors.onSurface }}>
-                    {item.jobTitle || "Contact"} @ {item.company}
+                    {item.jobTitle || "Contact"}
+                    {item.company ? ` @ ${item.company}` : ""}
                   </Text>
-                  {item.phone && (
+                  {!!item.phone && (
                     <Text style={{ color: theme.colors.outline, marginTop: 2 }}>
                       Phone: {item.phone}
                     </Text>
                   )}
-                  <Text style={{ color: theme.colors.outline }}>
-                    Email: {item.email}
-                  </Text>
+                  {!!item.email && (
+                    <Text style={{ color: theme.colors.outline }}>
+                      Email: {item.email}
+                    </Text>
+                  )}
                 </View>
               )}
               titleStyle={{
@@ -124,7 +143,7 @@ export default function ContactsPage() {
                   ]}
                 >
                   <Text style={styles.avatarText}>
-                    {item.fullName.charAt(0).toUpperCase()}
+                    {(item.fullName || "?").charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}

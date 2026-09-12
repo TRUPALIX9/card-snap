@@ -23,9 +23,9 @@ import axios from "axios";
 
 interface IContact {
   _id: string;
-  fullName: string;
-  email: string;
-  company: string;
+  fullName?: string;
+  email?: string;
+  company?: string;
   jobTitle?: string;
   phone?: string;
 }
@@ -101,8 +101,10 @@ export default function ContactDetailPage() {
             style={[styles.card, { backgroundColor: theme.colors.surface }]}
           >
             <Card.Title
-              title={contact.fullName}
-              subtitle={`${contact.jobTitle || "Contact"} @ ${contact.company}`}
+              title={contact.fullName || "Unnamed contact"}
+              subtitle={`${contact.jobTitle || "Contact"}${
+                contact.company ? ` @ ${contact.company}` : ""
+              }`}
               left={(props) => (
                 <Avatar.Icon
                   {...props}
@@ -120,7 +122,7 @@ export default function ContactDetailPage() {
                 Contact Info
               </Text>
 
-              {contact.phone && (
+              {!!contact.phone && (
                 <TouchableRipple
                   onPress={() => setShowCallDialog(true)}
                   rippleColor={theme.colors.primary}
@@ -141,34 +143,46 @@ export default function ContactDetailPage() {
                 </TouchableRipple>
               )}
 
-              <TouchableRipple
-                onPress={handleEmail}
-                rippleColor={theme.colors.primary}
-                style={styles.touchItem}
-              >
-                <View>
-                  <Text style={[styles.label, { color: theme.colors.outline }]}>
-                    Email
-                  </Text>
-                  <Text style={[styles.value, { color: theme.colors.primary }]}>
-                    {contact.email}
-                  </Text>
-                </View>
-              </TouchableRipple>
+              {!!contact.email && (
+                <TouchableRipple
+                  onPress={handleEmail}
+                  rippleColor={theme.colors.primary}
+                  style={styles.touchItem}
+                >
+                  <View>
+                    <Text
+                      style={[styles.label, { color: theme.colors.outline }]}
+                    >
+                      Email
+                    </Text>
+                    <Text
+                      style={[styles.value, { color: theme.colors.primary }]}
+                    >
+                      {contact.email}
+                    </Text>
+                  </View>
+                </TouchableRipple>
+              )}
 
-              <Text
-                style={[
-                  styles.label,
-                  { marginTop: 16, color: theme.colors.outline },
-                ]}
-              >
-                🏢 Company
-              </Text>
-              <Text style={[styles.value, { color: theme.colors.onSurface }]}>
-                {contact.company}
-              </Text>
+              {!!contact.company && (
+                <>
+                  <Text
+                    style={[
+                      styles.label,
+                      { marginTop: 16, color: theme.colors.outline },
+                    ]}
+                  >
+                    🏢 Company
+                  </Text>
+                  <Text
+                    style={[styles.value, { color: theme.colors.onSurface }]}
+                  >
+                    {contact.company}
+                  </Text>
+                </>
+              )}
 
-              {contact.jobTitle && (
+              {!!contact.jobTitle && (
                 <>
                   <Text style={[styles.label, { color: theme.colors.outline }]}>
                     🧑‍💼 Job Title
