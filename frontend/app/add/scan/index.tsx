@@ -150,9 +150,15 @@ export default function ScanAddPage() {
             onPress={toggleCamera}
             iconColor="#fff"
             style={styles.flipButton}
+            accessibilityLabel="Switch camera"
           />
 
-          <TouchableOpacity onPress={takePhoto} disabled={isProcessing}>
+          <TouchableOpacity
+            onPress={takePhoto}
+            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel="Capture business card"
+          >
             <View
               style={[
                 styles.shutter,
