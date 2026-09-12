@@ -25,7 +25,7 @@ export default function HomeScreen() {
           variant="headlineMedium"
           style={[styles.heading, { color: theme.colors.primary }]}
         >
-          Welcome to Card Vault
+          Welcome to Card Snap
         </Text>
 
         <Text
@@ -75,7 +75,7 @@ export default function HomeScreen() {
       </Surface>
 
       <Text style={[styles.footer, { color: theme.colors.primary }]}>
-        © 2025 Card Vault • v1.0
+        © 2025 Card Snap • v1.0
       </Text>
     </View>
   );

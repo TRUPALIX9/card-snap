@@ -111,7 +111,7 @@ export default function UserProfileScreen() {
           </Text>
         )}
         <Text style={[styles.footer, { color: theme.colors.outline }]}>
-          © 2025 Card Vault • Profile
+          © 2025 Card Snap • Profile
         </Text>
       </ScrollView>
     </View>

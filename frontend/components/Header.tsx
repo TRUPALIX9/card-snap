@@ -17,7 +17,7 @@ export default function Header() {
     if (pathname === "/profile") return "Profile";
     if (pathname === "/add/scan") return "Scan Business Card";
     if (pathname.startsWith("/add")) return "Add Contact";
-    return "Card Vault";
+    return "Card Snap";
   };
 
   // Appbar.Header already pads the top safe-area inset. Wrapping it in
