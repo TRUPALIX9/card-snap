@@ -67,7 +67,7 @@
   <path d="M96 560H1184" stroke="#FFFFFF" stroke-opacity="0.16"/>
   <rect x="96" y="582" width="8" height="8" fill="#008BFF"/>
   <text x="116" y="591" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" letter-spacing="1" fill="#9FC4E4">trupalpatel.com</text>
-  <text x="1184" y="591" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" letter-spacing="1" text-anchor="end" fill="#6F97BA">card-snap</text>
+  <text x="768" y="591" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" letter-spacing="1" text-anchor="end" fill="#6F97BA">TRUPALIX9/card-snap</text>
 
   <!-- paper business card (the thing being scanned), tucked behind the phone -->
   <g transform="translate(648 330) rotate(-9)" filter="url(#csb-paper)">

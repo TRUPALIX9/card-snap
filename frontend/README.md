@@ -78,4 +78,4 @@ frontend/
 
 ## Author
 
-**Trupal Patel** · [trupalpatel.com](https://trupalpatel.com) · [trupal.work@gmail.com](mailto:trupal.work@gmail.com) · [GitHub](https://github.com/TRUPALIX9)
+**Trupal Patel** · [trupalpatel.com](https://trupalpatel.com) · [trupal.work@gmail.com](mailto:trupal.work@gmail.com) · [LinkedIn](https://www.linkedin.com/in/trupalix) · [GitHub](https://github.com/TRUPALIX9)
