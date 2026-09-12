@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 import { ExpressHandler } from "../@types/express";
 
 // Diagnostics for local development.
-// /status is always available as a health check. /system and /db are only
-// mounted when NODE_ENV is not "production" (see routes/playground/index.ts).
+// /status is always available as a health check. /system and /db return 404
+// when NODE_ENV is "production" (see the devOnly guard in
+// routes/playground/index.ts).
 // Environment variables and database documents are never returned.
 
 // GET /status
