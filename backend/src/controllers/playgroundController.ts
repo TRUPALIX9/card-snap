@@ -2,10 +2,15 @@ import os from "os";
 import mongoose from "mongoose";
 import { ExpressHandler } from "../@types/express";
 
+// Diagnostics for local development.
+// /status is always available as a health check. /system and /db are only
+// mounted when NODE_ENV is not "production" (see routes/playground/index.ts).
+// Environment variables and database documents are never returned.
+
 // GET /status
 export const getApiStatus: ExpressHandler = async (_req, res) => {
   return res.json({
-    name: "Card Vault API",
+    name: "Card Snap API",
     status: "🟢 running",
     timestamp: new Date().toISOString(),
     port: process.env.PORT || "unknown",
@@ -16,7 +21,6 @@ export const getApiStatus: ExpressHandler = async (_req, res) => {
 // GET /system
 export const getSystemInfo: ExpressHandler = async (_req, res) => {
   return res.json({
-    hostname: os.hostname(),
     platform: os.platform(),
     uptime: os.uptime(),
     memory: {
@@ -27,7 +31,7 @@ export const getSystemInfo: ExpressHandler = async (_req, res) => {
   });
 };
 
-// GET /db
+// GET /db (collection names and counts only, no documents)
 export const getDatabaseInfo: ExpressHandler = async (_req, res) => {
   const db = mongoose.connection.db;
 
@@ -40,20 +44,12 @@ export const getDatabaseInfo: ExpressHandler = async (_req, res) => {
 
     const info = await Promise.all(
       collections.map(async (col) => {
-        const collection = db.collection(col.name);
-        const count = await collection.estimatedDocumentCount();
-        const sample = await collection.findOne();
-        return {
-          name: col.name,
-          count,
-          sample,
-          fields: sample ? Object.keys(sample) : [],
-        };
+        const count = await db.collection(col.name).estimatedDocumentCount();
+        return { name: col.name, count };
       })
     );
 
     return res.json({
-      name: db.databaseName,
       totalCollections: info.length,
       collections: info,
     });
@@ -61,33 +57,4 @@ export const getDatabaseInfo: ExpressHandler = async (_req, res) => {
     console.error("DB Info Error:", err);
     return res.status(500).json({ message: "Failed to fetch database info" });
   }
-};
-
-// GET /env
-export const getEnvironmentVariables: ExpressHandler = async (_req, res) => {
-  return res.json({
-    NODE_ENV: process.env.NODE_ENV || "development",
-    PORT: process.env.PORT || "Not set",
-    MONGO_URI: process.env.MONGO_URI || "Not set",
-    EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "Not set",
-  });
-};
-
-// PUT /env (simulate)
-export const simulateEnvUpdate: ExpressHandler = async (req, res) => {
-  const updates = req.body;
-  const applied: Record<string, string> = {};
-
-  for (const key in updates) {
-    if (typeof updates[key] === "string") {
-      process.env[key] = updates[key]; // applies in-memory only
-      applied[key] = updates[key];
-    }
-  }
-
-  return res.json({
-    message: "Environment variables updated in memory only.",
-    applied,
-    note: "To persist, update .env file and restart the server.",
-  });
 };
