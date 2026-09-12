@@ -66,7 +66,7 @@ app.use((req, res, next) => {
 app.use("/api/contacts", contactsRoutes); // GET, POST
 app.use("/api/contacts", contactIdRoutes); // GET /:id, PUT, DELETE
 app.use("/api/user", userRoutes);
-app.use("/api/playground", playgroundRoutes); // /status, /env, /system, /db
+app.use("/api/playground", playgroundRoutes); // /status, plus /system and /db outside production
 app.use("/api/ocr", ocrRoutes);
 app.use("/api/ocrExtract", ocrExtractRoutes);
 
@@ -86,7 +86,10 @@ function getLocalIP(): string {
 // 🧪 Call playground APIs on startup
 const callPlaygroundAPIs = async (port: string | number) => {
   const base = `http://localhost:${port}/api/playground`;
-  const routes = ["/status", "/env", "/system", "/db"];
+  const routes =
+    process.env.NODE_ENV === "production"
+      ? ["/status"]
+      : ["/status", "/system", "/db"];
 
   for (const route of routes) {
     try {

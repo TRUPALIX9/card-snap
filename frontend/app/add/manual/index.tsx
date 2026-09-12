@@ -1,19 +1,73 @@
 "use client";
 import { useState } from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import { StyleSheet, ScrollView, Alert, TextInputProps } from "react-native";
 import { Text, TextInput, Button, useTheme } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
+
+type FormField =
+  | "fullName"
+  | "email"
+  | "company"
+  | "phone"
+  | "jobTitle"
+  | "department"
+  | "industry"
+  | "website"
+  | "address"
+  | "notes";
+
+const FIELDS: {
+  key: FormField;
+  label: string;
+  multiline?: boolean;
+  keyboardType?: TextInputProps["keyboardType"];
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+}[] = [
+  { key: "fullName", label: "Full name *", autoCapitalize: "words" },
+  {
+    key: "email",
+    label: "Email *",
+    keyboardType: "email-address",
+    autoCapitalize: "none",
+  },
+  { key: "company", label: "Company *" },
+  { key: "phone", label: "Phone", keyboardType: "phone-pad" },
+  { key: "jobTitle", label: "Job title" },
+  { key: "department", label: "Department" },
+  { key: "industry", label: "Industry" },
+  {
+    key: "website",
+    label: "Website",
+    keyboardType: "url",
+    autoCapitalize: "none",
+  },
+  { key: "address", label: "Address", multiline: true },
+  { key: "notes", label: "Notes", multiline: true },
+];
+
+const asString = (value: string | string[] | undefined) =>
+  (Array.isArray(value) ? value[0] : value) ?? "";
 
 export default function ManualAddPage() {
   const theme = useTheme();
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    company: "",
-    phone: "",
+  // Filled in by the scan screen with the fields read from the card.
+  const params = useLocalSearchParams<{
+    fullName?: string;
+    email?: string;
+    company?: string;
+    phone?: string;
+    scanned?: string;
+  }>();
+  const fromScan = asString(params.scanned) === "1";
+
+  const [form, setForm] = useState<Record<FormField, string>>({
+    fullName: asString(params.fullName),
+    email: asString(params.email),
+    company: asString(params.company),
+    phone: asString(params.phone),
     jobTitle: "",
     department: "",
     industry: "",
@@ -22,14 +76,14 @@ export default function ManualAddPage() {
     notes: "",
   });
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: FormField, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
     const { fullName, email, company } = form;
 
-    if (!fullName || !email || !company) {
+    if (!fullName.trim() || !email.trim() || !company.trim()) {
       Alert.alert(
         "Missing Fields",
         "Full Name, Email, and Company are required."
@@ -58,27 +112,24 @@ export default function ManualAddPage() {
         Add Contact Manually
       </Text>
 
-      {[
-        "fullName",
-        "email",
-        "company",
-        "phone",
-        "jobTitle",
-        "department",
-        "industry",
-        "website",
-        "address",
-        "notes",
-      ].map((field) => (
+      {fromScan && (
+        <Text style={[styles.hint, { color: theme.colors.outline }]}>
+          Review the details read from the card, then save.
+        </Text>
+      )}
+
+      {FIELDS.map((field) => (
         <TextInput
-          key={field}
-          label={field.charAt(0).toUpperCase() + field.slice(1)}
-          value={(form as any)[field]}
-          onChangeText={(text) => handleChange(field, text)}
+          key={field.key}
+          label={field.label}
+          value={form[field.key]}
+          onChangeText={(text) => handleChange(field.key, text)}
           mode="outlined"
           style={styles.input}
-          multiline={field === "notes" || field === "address"}
-          numberOfLines={field === "notes" || field === "address" ? 3 : 1}
+          keyboardType={field.keyboardType}
+          autoCapitalize={field.autoCapitalize}
+          multiline={field.multiline}
+          numberOfLines={field.multiline ? 3 : 1}
         />
       ))}
 
@@ -105,6 +156,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
+  },
+  hint: {
+    textAlign: "center",
+    marginTop: -8,
+    marginBottom: 16,
   },
   input: {
     marginBottom: 12,

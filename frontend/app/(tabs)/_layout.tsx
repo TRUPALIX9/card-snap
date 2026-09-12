@@ -35,6 +35,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          title: "Home",
+          tabBarAccessibilityLabel: "Home",
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -42,6 +44,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="contacts"
         options={{
+          title: "Contacts",
+          tabBarAccessibilityLabel: "Contacts",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="address-book" color={color} />
           ),
@@ -51,6 +55,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          title: "Profile",
+          tabBarAccessibilityLabel: "Profile",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="user-circle" color={color} />
           ),

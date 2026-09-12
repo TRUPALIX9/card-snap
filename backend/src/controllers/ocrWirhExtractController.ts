@@ -5,10 +5,14 @@ import sharp from "sharp";
 import { createWorker } from "tesseract.js";
 import nlp from "compromise";
 
+const UPLOAD_DIR = "uploads";
+
 // Utility: Save image and preprocess
 const preprocessImage = async (base64: string, filename: string) => {
   const imageBuffer = Buffer.from(base64, "base64");
-  const outputPath = path.join("uploads", filename);
+  // uploads/ is gitignored, so create it on first use (sharp won't).
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  const outputPath = path.join(UPLOAD_DIR, filename);
   await sharp(imageBuffer)
     .rotate() // auto-rotate
     .grayscale()
@@ -18,21 +22,34 @@ const preprocessImage = async (base64: string, filename: string) => {
   return outputPath;
 };
 
-// Utility: Hugging Face NER API
+// Utility: Hugging Face NER API (optional).
+// Returns null when HUGGINGFACE_API_KEY is unset or the call fails, so the
+// Tesseract and regex results are still returned.
 const extractWithHuggingFace = async (text: string) => {
-  const res = await fetch(
-    "https://api-inference.huggingface.co/models/dslim/bert-base-NER",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: text }),
+  const apiKey = process.env.HUGGINGFACE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(
+      "https://api-inference.huggingface.co/models/dslim/bert-base-NER",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inputs: text }),
+      }
+    );
+    if (!res.ok) {
+      console.warn(`HuggingFace NER skipped: HTTP ${res.status}`);
+      return null;
     }
-  );
-  const json = await res.json();
-  return json;
+    return await res.json();
+  } catch (err) {
+    console.warn("HuggingFace NER skipped:", String(err));
+    return null;
+  }
 };
 
 export const handleOcrExtract = async (
@@ -47,10 +64,11 @@ export const handleOcrExtract = async (
 
   const timestamp = Date.now();
   const filename = `processed-${timestamp}.png`;
+  const imagePath = path.join(UPLOAD_DIR, filename);
 
   try {
     // 1. Preprocess image
-    const imagePath = await preprocessImage(base64, filename);
+    await preprocessImage(base64, filename);
     console.log("📷 Preprocessed Image Path:", imagePath);
 
     // 2. Run OCR with Tesseract.js
@@ -103,13 +121,13 @@ export const handleOcrExtract = async (
       huggingFaceResult,
       rawExtraction,
     });
-
-    // Optional cleanup
-    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
   } catch (err) {
     console.error("❌ OCR extraction error:", err);
     res
       .status(500)
       .json({ error: "Failed to extract text", details: String(err) });
+  } finally {
+    // Don't keep photos of people's business cards on disk.
+    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
   }
 };

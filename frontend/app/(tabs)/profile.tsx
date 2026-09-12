@@ -71,47 +71,39 @@ export default function UserProfileScreen() {
               {user.fullName}
             </Text>
             <Text style={{ color: theme.colors.onSurface }}>{user.email}</Text>
-
-            <Divider
-              style={[
-                styles.divider,
-                { backgroundColor: theme.colors.outline },
-              ]}
-            />
-
-            <View style={styles.section}>
-              <Text
-                variant="titleMedium"
-                style={{ color: theme.colors.primary }}
-              >
-                Settings
-              </Text>
-              <List.Item
-                title="Dark Mode"
-                titleStyle={{ color: theme.colors.onSurface }}
-                left={() => (
-                  <List.Icon
-                    icon="theme-light-dark"
-                    color={theme.colors.primary}
-                  />
-                )}
-                right={() => (
-                  <Switch
-                    value={isDark}
-                    onValueChange={toggleTheme}
-                    color={theme.colors.primary}
-                  />
-                )}
-              />
-            </View>
           </>
         ) : (
-          <Text style={{ marginTop: 100, color: theme.colors.error }}>
+          <Text style={{ marginTop: 32, color: theme.colors.error }}>
             Failed to load profile.
           </Text>
         )}
+
+        <Divider
+          style={[styles.divider, { backgroundColor: theme.colors.outline }]}
+        />
+
+        {/* Settings stay available even when the profile request fails. */}
+        <View style={styles.section}>
+          <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
+            Settings
+          </Text>
+          <List.Item
+            title="Dark Mode"
+            titleStyle={{ color: theme.colors.onSurface }}
+            left={() => (
+              <List.Icon icon="theme-light-dark" color={theme.colors.primary} />
+            )}
+            right={() => (
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                color={theme.colors.primary}
+              />
+            )}
+          />
+        </View>
         <Text style={[styles.footer, { color: theme.colors.outline }]}>
-          © 2025 Card Vault • Profile
+          © 2025 Card Snap • Profile
         </Text>
       </ScrollView>
     </View>

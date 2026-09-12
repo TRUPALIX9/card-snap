@@ -20,7 +20,7 @@ export default function AddContactPage() {
           Add a Contact
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.onSurface }]}>
-          Choose how you’d like to add a new contact to your vault.
+          Choose how you’d like to add a new contact.
         </Text>
       </View>
 

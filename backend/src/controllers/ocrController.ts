@@ -5,6 +5,8 @@ import path from "path";
 import { createWorker } from "tesseract.js";
 import sharp from "sharp";
 
+const UPLOAD_DIR = "uploads";
+
 export const handleBase64OCR = async (
   req: Request,
   res: Response
@@ -17,10 +19,12 @@ export const handleBase64OCR = async (
   }
 
   const imageBuffer = Buffer.from(base64, "base64");
-  const tempPath = path.join("uploads", `temp-${Date.now()}.png`);
-  const processedPath = path.join("uploads", `processed-${Date.now()}.png`);
+  const processedPath = path.join(UPLOAD_DIR, `processed-${Date.now()}.png`);
 
   try {
+    // uploads/ is gitignored, so create it on first use (sharp won't).
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
     // Preprocess: Convert to grayscale, threshold, rotate if needed
     await sharp(imageBuffer)
       .rotate() // auto-orientation
@@ -40,7 +44,6 @@ export const handleBase64OCR = async (
     });
 
     await worker.terminate();
-    // fs.unlinkSync(processedPath);
 
     res.json({
       message: "OCR completed",
@@ -49,7 +52,9 @@ export const handleBase64OCR = async (
     });
   } catch (err) {
     console.error("OCR failed:", err);
-    // if (fs.existsSync(processedPath)) fs.unlinkSync(processedPath);
     res.status(500).json({ error: "OCR failed", details: String(err) });
+  } finally {
+    // Don't keep photos of people's business cards on disk.
+    if (fs.existsSync(processedPath)) fs.unlinkSync(processedPath);
   }
 };
