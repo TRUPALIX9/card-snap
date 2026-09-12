@@ -41,19 +41,21 @@ It is a personal project in one repository with two halves: [`frontend/`](fronte
 
 <table>
   <tr>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
       <img src="docs/assets/screen-contacts.svg" alt="Contacts tab: search bar and contact cards with name, job title at company, phone and email" />
       <br /><sub><b>Contacts</b>: search by name, email or company</sub>
     </td>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
       <img src="docs/assets/screen-scan.svg" alt="Scan Business Card: camera view of a business card with the camera-flip and shutter buttons" />
       <br /><sub><b>Scan</b>: photograph a card to prefill a contact</sub>
     </td>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
       <img src="docs/assets/screen-contact.svg" alt="Contact Info: name, job title and company with tappable phone and email" />
       <br /><sub><b>Contact Info</b>: tap to call or email</sub>
     </td>
-    <td align="center" width="25%">
+  </tr>
+  <tr>
+    <td align="center" width="33%">
       <img src="docs/assets/screen-home-dark.svg" alt="Home tab in the dark theme with View Contacts, Add Contact and Profile and Settings buttons" />
       <br /><sub><b>Home</b>: dark theme</sub>
     </td>
